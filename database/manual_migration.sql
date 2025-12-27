@@ -106,6 +106,7 @@ CREATE TABLE jobs (
     created_at INTEGER NOT NULL
 );
 
+-- Create jobs indexes
 CREATE INDEX jobs_queue_index ON jobs(queue);
 
 -- Create job_batches table
@@ -143,6 +144,7 @@ CREATE TABLE sessions (
     last_activity INTEGER NOT NULL
 );
 
+-- Create sessions indexes
 CREATE INDEX sessions_user_id_index ON sessions(user_id);
 CREATE INDEX sessions_last_activity_index ON sessions(last_activity);
 
