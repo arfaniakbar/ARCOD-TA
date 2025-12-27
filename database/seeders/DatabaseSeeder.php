@@ -17,6 +17,7 @@ class DatabaseSeeder extends Seeder
             
             // Panggil seeder AdminUserSeeder yang baru kita buat
             AdminUserSeeder::class, 
+            LegacySeeder::class, 
         ]);
     }
 }
