@@ -83,34 +83,60 @@ Route::get('/migrate-db', function () {
         $sqlFile = database_path('manual_migration.sql');
         $sql = file_get_contents($sqlFile);
         
-        // Split by semicolon and execute each statement
+        // Better SQL parsing: remove comments first, then split by semicolon
+        $output .= '<p>✓ Parsing SQL statements...</p>';
+        $lines = explode("\n", $sql);
+        $cleanedLines = [];
+        foreach ($lines as $line) {
+            $line = trim($line);
+            // Skip empty lines and comment-only lines
+            if (empty($line) || str_starts_with($line, '--')) {
+                continue;
+            }
+            $cleanedLines[] = $line;
+        }
+        $cleanSql = implode(' ', $cleanedLines);
+        
+        // Split by semicolon
+        $statements = array_filter(array_map('trim', explode(';', $cleanSql)));
+        
+        $output .= '<p>  → Found ' . count($statements) . ' SQL statements</p>';
         $output .= '<p>✓ Executing SQL statements...</p>';
-        $statements = array_filter(array_map('trim', explode(';', $sql)));
         
         $successCount = 0;
         $errorCount = 0;
         
-        foreach ($statements as $statement) {
-            if (empty($statement) || str_starts_with($statement, '--')) {
+        foreach ($statements as $index => $statement) {
+            if (empty($statement)) {
                 continue;
             }
             
             try {
                 Illuminate\Support\Facades\DB::statement($statement);
                 $successCount++;
+                
+                // Log first 50 chars of successful statements
+                $preview = substr($statement, 0, 50);
+                $output .= "<p style='font-size:0.9em;color:green'>  ✓ [{$index}] " . htmlspecialchars($preview) . "...</p>";
             } catch (\Exception $e) {
                 $errorCount++;
-                $output .= "<p style='color:orange'>⚠ Warning: " . htmlspecialchars(substr($e->getMessage(), 0, 100)) . "...</p>";
+                $preview = substr($statement, 0, 50);
+                $output .= "<p style='font-size:0.9em;color:orange'>  ✗ [{$index}] " . htmlspecialchars($preview) . "... - " . htmlspecialchars(substr($e->getMessage(), 0, 80)) . "</p>";
             }
         }
         
-        $output .= "<p>✓ Executed {$successCount} statements successfully ({$errorCount} warnings)</p>";
+        $output .= "<p>✓ Executed {$successCount} statements successfully ({$errorCount} errors)</p>";
         
         // Check what tables were created
         $output .= '<p>✓ Checking created tables...</p>';
         $createdTables = Illuminate\Support\Facades\DB::select("SELECT tablename FROM pg_tables WHERE schemaname = 'public' ORDER BY tablename");
         $tableNames = array_map(fn($t) => $t->tablename, $createdTables);
-        $output .= '<p>  → Tables: ' . implode(', ', $tableNames) . '</p>';
+        
+        if (empty($tableNames)) {
+            $output .= '<p style="color:red">  → No tables created!</p>';
+        } else {
+            $output .= '<p>  → Tables: ' . implode(', ', $tableNames) . '</p>';
+        }
         
         // Then seed
         $output .= '<p>✓ Seeding database...</p>';
