@@ -74,20 +74,33 @@ Route::middleware('auth')->group(function () {
 
 require __DIR__.'/auth.php';
 
-// Temporary route to drop cache tables
-Route::get('/fix-cache', function () {
+// Temporary route to create user akbar
+Route::get('/create-user-akbar', function () {
     try {
-        // Clear config cache first
-        Illuminate\Support\Facades\Artisan::call('config:clear');
-        Illuminate\Support\Facades\Artisan::call('cache:clear');
+        // Check if user already exists
+        $existing = \App\Models\User::where('username', 'akbar')->first();
+        if ($existing) {
+            return '<h2>ℹ️ User already exists!</h2>'
+                . '<p>Username: <strong>akbar</strong></p>'
+                . '<p>Password: <strong>password</strong></p>'
+                . '<p><a href="/login" style="background:#0070f3;color:white;padding:10px 20px;text-decoration:none;border-radius:5px;">Go to Login</a></p>';
+        }
         
-        // Drop cache tables
-        Illuminate\Support\Facades\DB::statement('DROP TABLE IF EXISTS cache CASCADE');
-        Illuminate\Support\Facades\DB::statement('DROP TABLE IF EXISTS cache_locks CASCADE');
+        // Create new user
+        \App\Models\User::create([
+            'name' => 'Akbar',
+            'username' => 'akbar',
+            'email' => 'akbar@example.com',
+            'password' => bcrypt('password'),
+            'role' => 'admin',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
         
-        return '<h2>✅ Cache fixed successfully!</h2>'
-            . '<p>Config cleared and cache tables dropped.</p>'
-            . '<p>Cache is now using array driver (in-memory).</p>'
+        return '<h2>✅ User created successfully!</h2>'
+            . '<p>Username: <strong>akbar</strong></p>'
+            . '<p>Password: <strong>password</strong></p>'
+            . '<p>Role: <strong>admin</strong></p>'
             . '<p><a href="/login" style="background:#0070f3;color:white;padding:10px 20px;text-decoration:none;border-radius:5px;">Go to Login</a></p>';
     } catch (\Exception $e) {
         return '<h2>❌ Error</h2><p>' . $e->getMessage() . '</p>';
