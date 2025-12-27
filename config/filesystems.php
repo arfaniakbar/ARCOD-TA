@@ -60,6 +60,12 @@ return [
             'report' => false,
         ],
 
+        'vercel' => [
+            'driver' => 'vercel',
+            'token' => env('BLOB_READ_WRITE_TOKEN'),
+            'throw' => false,
+        ],
+
     ],
 
     /*
