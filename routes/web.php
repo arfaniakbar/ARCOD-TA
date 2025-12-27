@@ -106,6 +106,12 @@ Route::get('/migrate-db', function () {
         
         $output .= "<p>✓ Executed {$successCount} statements successfully ({$errorCount} warnings)</p>";
         
+        // Check what tables were created
+        $output .= '<p>✓ Checking created tables...</p>';
+        $createdTables = Illuminate\Support\Facades\DB::select("SELECT tablename FROM pg_tables WHERE schemaname = 'public' ORDER BY tablename");
+        $tableNames = array_map(fn($t) => $t->tablename, $createdTables);
+        $output .= '<p>  → Tables: ' . implode(', ', $tableNames) . '</p>';
+        
         // Then seed
         $output .= '<p>✓ Seeding database...</p>';
         try {
