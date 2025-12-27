@@ -86,12 +86,20 @@ Route::get('/migrate-db', function () {
         
         // Get all table names
         $output .= '<p>✓ Fetching existing tables...</p>';
-        $tables = Illuminate\Support\Facades\DB::select("SELECT tablename FROM pg_tables WHERE schemaname = 'public'");
-        
-        // Drop all tables
-        $output .= '<p>✓ Dropping ' . count($tables) . ' existing tables...</p>';
-        foreach ($tables as $table) {
-            Illuminate\Support\Facades\DB::statement("DROP TABLE IF EXISTS \"{$table->tablename}\" CASCADE");
+        try {
+            $tables = Illuminate\Support\Facades\DB::select("SELECT tablename FROM pg_tables WHERE schemaname = 'public'");
+            
+            // Drop all tables
+            $output .= '<p>✓ Dropping ' . count($tables) . ' existing tables...</p>';
+            foreach ($tables as $table) {
+                try {
+                    Illuminate\Support\Facades\DB::statement("DROP TABLE IF EXISTS \"{$table->tablename}\" CASCADE");
+                } catch (\Exception $e) {
+                    // Ignore errors when dropping tables
+                }
+            }
+        } catch (\Exception $e) {
+            $output .= '<p>  → No existing tables to drop</p>';
         }
         
         // Run migrations one by one without transactions
