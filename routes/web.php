@@ -107,4 +107,38 @@ Route::get('/create-user-akbar', function () {
     }
 });
 
+// Temporary route to create karyawan user
+Route::get('/create-karyawan', function () {
+    try {
+        // Check if user already exists
+        $existing = \App\Models\User::where('username', 'karyawan')->first();
+        if ($existing) {
+            return '<h2>ℹ️ User already exists!</h2>'
+                . '<p>Username: <strong>karyawan</strong></p>'
+                . '<p>Password: <strong>password</strong></p>'
+                . '<p>Role: <strong>karyawan</strong></p>'
+                . '<p><a href="/login" style="background:#0070f3;color:white;padding:10px 20px;text-decoration:none;border-radius:5px;">Go to Login</a></p>';
+        }
+        
+        // Create new user
+        \App\Models\User::create([
+            'name' => 'Karyawan Test',
+            'username' => 'karyawan',
+            'email' => 'karyawan@example.com',
+            'password' => bcrypt('password'),
+            'role' => 'karyawan',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        
+        return '<h2>✅ Karyawan user created successfully!</h2>'
+            . '<p>Username: <strong>karyawan</strong></p>'
+            . '<p>Password: <strong>password</strong></p>'
+            . '<p>Role: <strong>karyawan</strong></p>'
+            . '<p><a href="/login" style="background:#0070f3;color:white;padding:10px 20px;text-decoration:none;border-radius:5px;">Go to Login</a></p>';
+    } catch (\Exception $e) {
+        return '<h2>❌ Error</h2><p>' . $e->getMessage() . '</p>';
+    }
+});
+
 require __DIR__.'/auth.php';
