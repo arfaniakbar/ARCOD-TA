@@ -80,12 +80,10 @@ Route::get('/migrate-db', function () {
         // Get all table names
         $tables = Illuminate\Support\Facades\DB::select("SELECT tablename FROM pg_tables WHERE schemaname = 'public'");
         
-        // Drop all tables one by one
-        Illuminate\Support\Facades\DB::statement('SET session_replication_role = replica');
+        // Drop all tables one by one with CASCADE
         foreach ($tables as $table) {
             Illuminate\Support\Facades\DB::statement("DROP TABLE IF EXISTS \"{$table->tablename}\" CASCADE");
         }
-        Illuminate\Support\Facades\DB::statement('SET session_replication_role = DEFAULT');
         
         // Now run migrations
         Illuminate\Support\Facades\Artisan::call('migrate', [
@@ -101,12 +99,13 @@ Route::get('/migrate-db', function () {
         
         $seedOutput = Illuminate\Support\Facades\Artisan::output();
         
-        return '<h2>Database migrated successfully!</h2>' 
+        return '<h2>✅ Database migrated successfully!</h2>' 
             . '<p>You can now login with your users.</p>'
+            . '<p><a href="/">Go to Homepage</a></p>'
             . '<details><summary>Migration Output</summary><pre>' . htmlspecialchars($migrateOutput) . '</pre></details>'
             . '<details><summary>Seed Output</summary><pre>' . htmlspecialchars($seedOutput) . '</pre></details>';
     } catch (\Exception $e) {
-        return '<h2>Migration failed</h2>' 
+        return '<h2>❌ Migration failed</h2>' 
             . '<p><strong>Error:</strong> ' . htmlspecialchars($e->getMessage()) . '</p>'
             . '<p><strong>File:</strong> ' . $e->getFile() . ':' . $e->getLine() . '</p>'
             . '<details><summary>Stack Trace</summary><pre>' . htmlspecialchars($e->getTraceAsString()) . '</pre></details>';
