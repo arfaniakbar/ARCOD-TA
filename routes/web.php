@@ -83,26 +83,61 @@ Route::get('/migrate-db', function () {
         $output .= '<p>✓ Clearing caches...</p>';
         Illuminate\Support\Facades\Artisan::call('config:clear');
         Illuminate\Support\Facades\Artisan::call('cache:clear');
-        Illuminate\Support\Facades\Artisan::call('route:clear');
-        Illuminate\Support\Facades\Artisan::call('view:clear');
         
         // Get all table names
         $output .= '<p>✓ Fetching existing tables...</p>';
         $tables = Illuminate\Support\Facades\DB::select("SELECT tablename FROM pg_tables WHERE schemaname = 'public'");
         
-        // Drop all tables one by one with CASCADE
+        // Drop all tables
         $output .= '<p>✓ Dropping ' . count($tables) . ' existing tables...</p>';
         foreach ($tables as $table) {
             Illuminate\Support\Facades\DB::statement("DROP TABLE IF EXISTS \"{$table->tablename}\" CASCADE");
         }
         
-        // Now run migrations
-        $output .= '<p>✓ Running migrations...</p>';
-        Illuminate\Support\Facades\Artisan::call('migrate', [
-            '--force' => true
-        ]);
+        // Run migrations one by one without transactions
+        $output .= '<p>✓ Running migrations individually...</p>';
         
-        $migrateOutput = Illuminate\Support\Facades\Artisan::output();
+        $migrationFiles = [
+            '0001_01_01_000001_create_cache_table.php',
+            '0001_01_01_000002_create_jobs_table.php',
+            '2025_09_25_015448_create_evidence_table.php',
+            '2025_09_25_053205_add_status_to_evidences_table.php',
+            '2025_10_23_005048_alter_file_path_column_on_evidences_table.php',
+            '2025_10_26_110654_create_sessions_table.php',
+        ];
+        
+        foreach ($migrationFiles as $file) {
+            try {
+                $output .= "<p>  → Running: {$file}</p>";
+                $path = database_path('migrations/' . $file);
+                if (file_exists($path)) {
+                    $migration = include $path;
+                    $migration->up();
+                }
+            } catch (\Exception $e) {
+                $output .= "<p style='color:orange'>  ⚠ Warning in {$file}: " . htmlspecialchars($e->getMessage()) . "</p>";
+            }
+        }
+        
+        // Create migrations table manually
+        $output .= '<p>✓ Creating migrations tracking table...</p>';
+        Illuminate\Support\Facades\DB::statement("
+            CREATE TABLE IF NOT EXISTS migrations (
+                id SERIAL PRIMARY KEY,
+                migration VARCHAR(255) NOT NULL,
+                batch INTEGER NOT NULL
+            )
+        ");
+        
+        // Insert migration records
+        $batch = 1;
+        foreach ($migrationFiles as $file) {
+            $migrationName = str_replace('.php', '', $file);
+            Illuminate\Support\Facades\DB::table('migrations')->insertOrIgnore([
+                'migration' => $migrationName,
+                'batch' => $batch
+            ]);
+        }
         
         // Then seed
         $output .= '<p>✓ Seeding database...</p>';
@@ -115,7 +150,6 @@ Route::get('/migrate-db', function () {
         $output .= '<h2>✅ Database migrated successfully!</h2>' 
             . '<p>You can now login with your users.</p>'
             . '<p><a href="/" style="background:#0070f3;color:white;padding:10px 20px;text-decoration:none;border-radius:5px;display:inline-block;margin-top:10px;">Go to Homepage</a></p>'
-            . '<details><summary>Migration Output</summary><pre>' . htmlspecialchars($migrateOutput) . '</pre></details>'
             . '<details><summary>Seed Output</summary><pre>' . htmlspecialchars($seedOutput) . '</pre></details>';
             
         return $output;
