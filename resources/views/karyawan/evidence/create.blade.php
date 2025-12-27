@@ -94,7 +94,7 @@
             <div class="form-group">
                 <label>File Evidence</label>
                 <div id="evidence-dropzone" class="dropzone">
-                    <div class="dz-message" data-dz-message><span>Seret foto/folder ke sini atau klik untuk memilih | Tanpa batasan ukuran & jumlah</span></div>
+                    <div class="dz-message" data-dz-message><span>Seret foto/folder ke sini atau klik untuk memilih | Max 1000 file @ 50MB per file</span></div>
                 </div>
             </div>
 
@@ -125,12 +125,13 @@
                 paramName: "file",
                 autoProcessQueue: false,
                 uploadMultiple: true,
-                parallelUploads: 100,
-                maxFiles: null, // 🔥 UNLIMITED FILES
-                maxFilesize: null, // 🔥 UNLIMITED SIZE
+                parallelUploads: 10, // Upload 10 files at a time
+                maxFiles: 1000, // Max 1000 files (very high limit)
+                maxFilesize: 50, // 50MB per file (reasonable for images)
                 acceptedFiles: 'image/*',
                 addRemoveLinks: false,
                 previewTemplate: previewTemplate,
+                timeout: 300000, // 5 minutes timeout
                 
                 init: function() {
                     const self = this;
