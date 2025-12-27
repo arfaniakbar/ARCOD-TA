@@ -85,7 +85,7 @@ class EvidenceController extends Controller
                     $path = $file->storeAs(
                         'evidences/'.$id_project, 
                         $originalName, 
-                        'public'
+                        'vercel' // Changed from 'public' to 'vercel' for Vercel Blob
                     );
                     
                     $fileData[] = [
@@ -181,7 +181,7 @@ class EvidenceController extends Controller
                     foreach ($deletedIndexes as $index) {
                         // Hapus file dari storage
                         if (isset($fileData[$index]['path'])) {
-                            Storage::disk('public')->delete($fileData[$index]['path']);
+                            Storage::disk('vercel')->delete($fileData[$index]['path']);
                         }
                         
                         // Tandai untuk dihapus dari array
@@ -215,7 +215,7 @@ class EvidenceController extends Controller
                     }
                     
                     // Simpan file dengan struktur folder yang dipertahankan
-                    $path = $file->storeAs($storagePath, $filename, 'public');
+                    $path = $file->storeAs($storagePath, $filename, 'vercel'); // Changed to vercel
                     
                     $fileData[] = [
                         'path' => $path,
@@ -272,7 +272,7 @@ class EvidenceController extends Controller
         if (is_array($evidence->file_path)) {
             foreach ($evidence->file_path as $file) {
                 if (is_array($file) && isset($file['path'])) {
-                    Storage::disk('public')->delete($file['path']);
+                    Storage::disk('vercel')->delete($file['path']);
                 }
             }
         }
