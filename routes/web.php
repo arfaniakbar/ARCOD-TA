@@ -77,24 +77,38 @@ require __DIR__.'/auth.php';
 // --- TEMPORARY: Route to run migrations on Vercel ---
 Route::get('/migrate-db', function () {
     try {
-        // First, try to drop all tables to start fresh
-        Illuminate\Support\Facades\DB::statement('DROP SCHEMA public CASCADE');
-        Illuminate\Support\Facades\DB::statement('CREATE SCHEMA public');
-        Illuminate\Support\Facades\DB::statement('GRANT ALL ON SCHEMA public TO neondb_owner');
-        Illuminate\Support\Facades\DB::statement('GRANT ALL ON SCHEMA public TO public');
+        // Get all table names
+        $tables = Illuminate\Support\Facades\DB::select("SELECT tablename FROM pg_tables WHERE schemaname = 'public'");
+        
+        // Drop all tables one by one
+        Illuminate\Support\Facades\DB::statement('SET session_replication_role = replica');
+        foreach ($tables as $table) {
+            Illuminate\Support\Facades\DB::statement("DROP TABLE IF EXISTS \"{$table->tablename}\" CASCADE");
+        }
+        Illuminate\Support\Facades\DB::statement('SET session_replication_role = DEFAULT');
         
         // Now run migrations
         Illuminate\Support\Facades\Artisan::call('migrate', [
             '--force' => true
         ]);
         
+        $migrateOutput = Illuminate\Support\Facades\Artisan::output();
+        
         // Then seed
         Illuminate\Support\Facades\Artisan::call('db:seed', [
             '--force' => true
         ]);
         
-        return 'Database migrated successfully! You can now login with your users.';
+        $seedOutput = Illuminate\Support\Facades\Artisan::output();
+        
+        return '<h2>Database migrated successfully!</h2>' 
+            . '<p>You can now login with your users.</p>'
+            . '<details><summary>Migration Output</summary><pre>' . htmlspecialchars($migrateOutput) . '</pre></details>'
+            . '<details><summary>Seed Output</summary><pre>' . htmlspecialchars($seedOutput) . '</pre></details>';
     } catch (\Exception $e) {
-        return 'Migration failed: ' . $e->getMessage() . '<br><br>Please contact support or try again.';
+        return '<h2>Migration failed</h2>' 
+            . '<p><strong>Error:</strong> ' . htmlspecialchars($e->getMessage()) . '</p>'
+            . '<p><strong>File:</strong> ' . $e->getFile() . ':' . $e->getLine() . '</p>'
+            . '<details><summary>Stack Trace</summary><pre>' . htmlspecialchars($e->getTraceAsString()) . '</pre></details>';
     }
 });
