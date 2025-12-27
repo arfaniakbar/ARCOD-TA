@@ -54,6 +54,8 @@ Route::middleware('auth')->group(function () {
 
     Route::put('password', [PasswordController::class, 'update'])->name('password.update');
 
+    // Support both GET and POST for logout
+    Route::get('logout', [AuthenticatedSessionController::class, 'destroy']);
     Route::post('logout', [AuthenticatedSessionController::class, 'destroy'])
         ->name('logout');
 });
