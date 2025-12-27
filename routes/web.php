@@ -77,12 +77,24 @@ require __DIR__.'/auth.php';
 // --- TEMPORARY: Route to run migrations on Vercel ---
 Route::get('/migrate-db', function () {
     try {
-        Illuminate\Support\Facades\Artisan::call('migrate:fresh', [
-            '--force' => true,
-            '--seed' => true // Optional: if you have seeders
+        // First, try to drop all tables to start fresh
+        Illuminate\Support\Facades\DB::statement('DROP SCHEMA public CASCADE');
+        Illuminate\Support\Facades\DB::statement('CREATE SCHEMA public');
+        Illuminate\Support\Facades\DB::statement('GRANT ALL ON SCHEMA public TO neondb_owner');
+        Illuminate\Support\Facades\DB::statement('GRANT ALL ON SCHEMA public TO public');
+        
+        // Now run migrations
+        Illuminate\Support\Facades\Artisan::call('migrate', [
+            '--force' => true
         ]);
-        return 'Database migrated successfully!';
+        
+        // Then seed
+        Illuminate\Support\Facades\Artisan::call('db:seed', [
+            '--force' => true
+        ]);
+        
+        return 'Database migrated successfully! You can now login with your users.';
     } catch (\Exception $e) {
-        return 'Migration failed: ' . $e->getMessage();
+        return 'Migration failed: ' . $e->getMessage() . '<br><br>Please contact support or try again.';
     }
 });
