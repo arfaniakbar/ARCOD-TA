@@ -73,3 +73,16 @@ Route::middleware('auth')->group(function () {
 });
 
 require __DIR__.'/auth.php';
+
+// --- TEMPORARY: Route to run migrations on Vercel ---
+Route::get('/migrate-db', function () {
+    try {
+        Illuminate\Support\Facades\Artisan::call('migrate:fresh', [
+            '--force' => true,
+            '--seed' => true // Optional: if you have seeders
+        ]);
+        return 'Database migrated successfully!';
+    } catch (\Exception $e) {
+        return 'Migration failed: ' . $e->getMessage();
+    }
+});
