@@ -76,16 +76,28 @@ require __DIR__.'/auth.php';
 
 // --- TEMPORARY: Route to run migrations on Vercel ---
 Route::get('/migrate-db', function () {
+    $output = '<h2>🔄 Migration Process</h2>';
+    
     try {
+        // Clear all caches first
+        $output .= '<p>✓ Clearing caches...</p>';
+        Illuminate\Support\Facades\Artisan::call('config:clear');
+        Illuminate\Support\Facades\Artisan::call('cache:clear');
+        Illuminate\Support\Facades\Artisan::call('route:clear');
+        Illuminate\Support\Facades\Artisan::call('view:clear');
+        
         // Get all table names
+        $output .= '<p>✓ Fetching existing tables...</p>';
         $tables = Illuminate\Support\Facades\DB::select("SELECT tablename FROM pg_tables WHERE schemaname = 'public'");
         
         // Drop all tables one by one with CASCADE
+        $output .= '<p>✓ Dropping ' . count($tables) . ' existing tables...</p>';
         foreach ($tables as $table) {
             Illuminate\Support\Facades\DB::statement("DROP TABLE IF EXISTS \"{$table->tablename}\" CASCADE");
         }
         
         // Now run migrations
+        $output .= '<p>✓ Running migrations...</p>';
         Illuminate\Support\Facades\Artisan::call('migrate', [
             '--force' => true
         ]);
@@ -93,21 +105,25 @@ Route::get('/migrate-db', function () {
         $migrateOutput = Illuminate\Support\Facades\Artisan::output();
         
         // Then seed
+        $output .= '<p>✓ Seeding database...</p>';
         Illuminate\Support\Facades\Artisan::call('db:seed', [
             '--force' => true
         ]);
         
         $seedOutput = Illuminate\Support\Facades\Artisan::output();
         
-        return '<h2>✅ Database migrated successfully!</h2>' 
+        $output .= '<h2>✅ Database migrated successfully!</h2>' 
             . '<p>You can now login with your users.</p>'
-            . '<p><a href="/">Go to Homepage</a></p>'
+            . '<p><a href="/" style="background:#0070f3;color:white;padding:10px 20px;text-decoration:none;border-radius:5px;display:inline-block;margin-top:10px;">Go to Homepage</a></p>'
             . '<details><summary>Migration Output</summary><pre>' . htmlspecialchars($migrateOutput) . '</pre></details>'
             . '<details><summary>Seed Output</summary><pre>' . htmlspecialchars($seedOutput) . '</pre></details>';
+            
+        return $output;
     } catch (\Exception $e) {
-        return '<h2>❌ Migration failed</h2>' 
+        $output .= '<h2>❌ Migration failed</h2>' 
             . '<p><strong>Error:</strong> ' . htmlspecialchars($e->getMessage()) . '</p>'
             . '<p><strong>File:</strong> ' . $e->getFile() . ':' . $e->getLine() . '</p>'
             . '<details><summary>Stack Trace</summary><pre>' . htmlspecialchars($e->getTraceAsString()) . '</pre></details>';
+        return $output;
     }
 });

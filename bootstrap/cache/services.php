@@ -35,6 +35,7 @@
     31 => 'Pest\\Laravel\\PestServiceProvider',
     32 => 'Phiki\\Adapters\\Laravel\\PhikiServiceProvider',
     33 => 'App\\Providers\\AppServiceProvider',
+    34 => 'App\\Providers\\VercelBlobServiceProvider',
   ),
   'eager' => 
   array (
@@ -56,6 +57,7 @@
     15 => 'Pest\\Laravel\\PestServiceProvider',
     16 => 'Phiki\\Adapters\\Laravel\\PhikiServiceProvider',
     17 => 'App\\Providers\\AppServiceProvider',
+    18 => 'App\\Providers\\VercelBlobServiceProvider',
   ),
   'deferred' => 
   array (

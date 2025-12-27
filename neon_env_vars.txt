@@ -1,0 +1,6 @@
+DB_CONNECTION=pgsql
+DB_HOST=ep-wild-lab-ah0nu4sk-pooler.c-3.us-east-1.aws.neon.tech
+DB_PORT=5432
+DB_DATABASE=neondb
+DB_USERNAME=neondb_owner
+DB_PASSWORD=npg_s9MoB7FkHlRN
