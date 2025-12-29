@@ -130,7 +130,7 @@
 </head>
 <body>
     <div class="login-container">
-        <img src="{{ asset('images/logo-kiri.png') }}" alt="Logo Telkom Indonesia" class="logo">
+        <img src="{{ asset('images/logo-kanan.jpg') }}" alt="Logo Telkom Indonesia" class="logo">
         
         <h2>PORTAL LOGIN</h2>
 
