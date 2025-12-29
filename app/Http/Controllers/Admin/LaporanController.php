@@ -42,8 +42,8 @@ class LaporanController extends Controller
         $approvedEvidences = $query->latest('updated_at')->get();
 
         $availableFilters = Evidence::select(
-            DB::raw('YEAR(updated_at) as year'),
-            DB::raw('MONTH(updated_at) as month')
+            DB::raw('EXTRACT(YEAR FROM updated_at) as year'),
+            DB::raw('EXTRACT(MONTH FROM updated_at) as month')
         )
             ->where('status', 'approved')
             ->groupBy('year', 'month')
