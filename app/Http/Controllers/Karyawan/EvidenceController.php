@@ -53,23 +53,70 @@ class EvidenceController extends Controller
      */
     public function store(Request $request)
     {
-        // 1. VALIDASI: SEMUA MASTER DATA DIUBAH MENJADI WAJIB (REQUIRED)
-        $request->validate([
-            'lokasi' => ['required', 'string', 'max:255'],
-            'deskripsi' => ['nullable', 'string'],
-            'file' => ['required', 'array', 'min:1'],
-            'file.*' => ['image', 'mimes:jpeg,jpg,png'], // 🔥 HAPUS LIMIT SIZE DULU
-            'caption' => ['nullable', 'array'],
-            'caption.*' => ['nullable', 'string', 'max:255'],
-            
-            'pangwas_id' => ['required', 'integer', 'exists:pangwas,id'], 
-            'tematik_id' => ['required', 'integer', 'exists:tematik,id'],
-            'po_id' => ['required', 'integer', 'exists:purchase_order,id'],
+        // Log request received
+        \Log::info('=== UPLOAD REQUEST RECEIVED ===', [
+            'user_id' => auth()->id(),
+            'has_files' => $request->hasFile('file'),
+            'file_count' => $request->hasFile('file') ? count($request->file('file')) : 0,
+            'lokasi' => $request->lokasi,
+            'pangwas_id' => $request->pangwas_id,
+            'tematik_id' => $request->tematik_id,
+            'po_id' => $request->po_id,
         ]);
+        
+        // 1. VALIDASI: SEMUA MASTER DATA DIUBAH MENJADI WAJIB (REQUIRED)
+        try {
+            $request->validate([
+                'lokasi' => ['required', 'string', 'max:255'],
+                'deskripsi' => ['nullable', 'string'],
+                'file' => ['required', 'array', 'min:1', 'max:50'], // Max 50 files to prevent timeout
+                'file.*' => ['image', 'mimes:jpeg,jpg,png', 'max:10240'], // Max 10MB per file
+                'caption' => ['nullable', 'array'],
+                'caption.*' => ['nullable', 'string', 'max:255'],
+                
+                'pangwas_id' => ['required', 'integer', 'exists:pangwas,id'], 
+                'tematik_id' => ['required', 'integer', 'exists:tematik,id'],
+                'po_id' => ['required', 'integer', 'exists:purchase_order,id'],
+            ]);
+            
+            \Log::info('Validation passed');
+            
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            \Log::error('Validation failed', ['errors' => $e->errors()]);
+            throw $e;
+        }
+        
+        // Additional validation: Check total file size
+        $totalSize = 0;
+        foreach ($request->file('file') as $file) {
+            $totalSize += $file->getSize();
+        }
+        
+        \Log::info('File size check', [
+            'total_size_mb' => round($totalSize / 1024 / 1024, 2),
+            'file_count' => count($request->file('file'))
+        ]);
+        
+        // Max 50MB total to prevent Vercel timeout
+        if ($totalSize > 50 * 1024 * 1024) {
+            \Log::warning('Total file size exceeds limit', ['total_size_mb' => round($totalSize / 1024 / 1024, 2)]);
+            return response()->json([
+                'message' => 'Total ukuran file terlalu besar. Maksimal 50MB untuk semua file.',
+                'errors' => ['file' => ['Total file size exceeds 50MB limit']]
+            ], 422);
+        }
+
 
         try {
             $fileData = [];
             $captions = $request->input('caption', []);
+            
+            // Log untuk debugging
+            \Log::info('Starting evidence upload', [
+                'user_id' => auth()->id(),
+                'file_count' => $request->hasFile('file') ? count($request->file('file')) : 0,
+                'lokasi' => $request->lokasi
+            ]);
             
             // Masukkan data project
             $id_project = GlobalModel::insertRecord('project',[
@@ -77,21 +124,46 @@ class EvidenceController extends Controller
                 'deskripsi' => $request->deskripsi
             ]);
             
+            \Log::info('Project created', ['project_id' => $id_project]);
+            
             // Proses upload semua file
             if ($request->hasFile('file')) {
                 foreach ($request->file('file') as $index => $file) {
-                    // Simpan dengan nama file asli
-                    $originalName = $file->getClientOriginalName();
-                    $path = $file->storeAs(
-                        'evidences/'.$id_project, 
-                        $originalName, 
-                        'vercel' // Changed from 'public' to 'vercel' for Vercel Blob
-                    );
-                    
-                    $fileData[] = [
-                        'path' => $path,
-                        'caption' => $captions[$index] ?? $originalName // Gunakan nama file asli kalau tidak ada caption
-                    ];
+                    try {
+                        // Simpan dengan nama file asli
+                        $originalName = $file->getClientOriginalName();
+                        $fileSize = $file->getSize();
+                        
+                        \Log::info("Uploading file {$index}", [
+                            'name' => $originalName,
+                            'size' => $fileSize,
+                            'mime' => $file->getMimeType()
+                        ]);
+                        
+                        $path = $file->storeAs(
+                            'evidences/'.$id_project, 
+                            $originalName, 
+                            'vercel'
+                        );
+                        
+                        if (!$path) {
+                            throw new \Exception("Failed to store file: {$originalName}");
+                        }
+                        
+                        $fileData[] = [
+                            'path' => $path,
+                            'caption' => $captions[$index] ?? $originalName // Gunakan nama file asli kalau tidak ada caption
+                        ];
+                        
+                        \Log::info("File uploaded successfully", ['path' => $path]);
+                        
+                    } catch (\Exception $fileError) {
+                        \Log::error("Failed to upload file {$index}", [
+                            'error' => $fileError->getMessage(),
+                            'file' => $originalName ?? 'unknown'
+                        ]);
+                        throw $fileError; // Re-throw to be caught by outer catch
+                    }
                 }
             }
 
@@ -110,6 +182,8 @@ class EvidenceController extends Controller
                 'po_id' => $request->po_id,
                 // --------------------------------
             ]);
+            
+            \Log::info('Evidence created successfully', ['total_files' => count($fileData)]);
 
             // PENTING: Mengembalikan JSON response untuk Dropzone
             return response()->json([
@@ -120,9 +194,15 @@ class EvidenceController extends Controller
             ], 200);
 
         } catch (\Exception $e) {
+            \Log::error('Evidence upload failed', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
             // Mengembalikan JSON error response untuk Dropzone
             return response()->json([
-                'message' => 'Gagal menyimpan data.', 
+                'success' => false,
+                'message' => 'Gagal menyimpan data: ' . $e->getMessage(), 
                 'errors' => ['system' => $e->getMessage()] 
             ], 500); 
         }
@@ -215,7 +295,7 @@ class EvidenceController extends Controller
                     }
                     
                     // Simpan file dengan struktur folder yang dipertahankan
-                    $path = $file->storeAs($storagePath, $filename, 'vercel'); // Changed to vercel
+                    $path = $file->storeAs($storagePath, $filename, 'vercel');
                     
                     $fileData[] = [
                         'path' => $path,
