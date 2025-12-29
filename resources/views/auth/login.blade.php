@@ -15,7 +15,19 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            /* **CATATAN:** Hapus background color dari sini, karena sudah dipindah ke body tag */
+            background: url('{{ asset('images/homepage.jpg') }}') no-repeat center center;
+            background-size: cover;
+            position: relative;
+        }
+        body::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.3);
+            z-index: 0;
         }
         .login-container {
             background: rgba(255,255,255,0.15); 
@@ -26,7 +38,9 @@
             backdrop-filter: blur(12px); 
             box-shadow: 0 15px 35px rgba(0,0,0,0.4);
             animation: fadeIn 0.8s ease-out;
-            border: 1px solid rgba(255, 255, 255, 0.3); 
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            position: relative;
+            z-index: 1;
         }
         @keyframes fadeIn {
             from {opacity: 0; transform: translateY(20px);}
@@ -114,25 +128,7 @@
         }
     </style>
 </head>
-<body style="
-    /* Solusi 1: Menggunakan fungsi asset() */
-    background-image: url('{{ asset('images/homepage.jpg') }}'); 
-    
-    /* Solusi 2: JALUR RELATIF LANGSUNG (Pastikan file ada di public/images/) */
-    background-image: linear-gradient(rgba(44, 62, 80, 0.8), rgba(44, 62, 80, 0.8)), url('/images/homepage.jpg'); 
-    
-    background-size: cover; 
-    background-position: center; 
-    background-repeat: no-repeat;
-    
-    /* Fallback dan Style Body Dasar */
-    background-color: #34495e; /* Warna solid jika gambar gagal */
-    font-family: 'Poppins', sans-serif;
-    height: 100vh;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-">
+<body>
     <div class="login-container">
         <img src="{{ asset('images/logo-kiri.png') }}" alt="Logo Telkom Indonesia" class="logo">
         
